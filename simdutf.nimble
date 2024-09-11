@@ -10,6 +10,7 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 2.0.0"
+requires "results >= 0.5.0"
 taskRequires "benchmark", "benchy", "lorem"
 
 task benchmark, "Run the benchmark against std/base64":
