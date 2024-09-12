@@ -40,7 +40,7 @@ proc encode*(input: string, urlSafe: bool = false): string =
             base64_url
           else:
             base64_default
-        )
+        ) + 1.cuint
       )
     else:
       allocShared(
@@ -50,7 +50,7 @@ proc encode*(input: string, urlSafe: bool = false): string =
             base64_url
           else:
             base64_default
-        )
+        ) + 1.cuint
       )
   
   # Convert the input to a `const char *` and pass it over to simdutf.
@@ -89,11 +89,11 @@ proc decode*(input: string, urlSafe: bool = false): string =
   var output = 
     when not compileOption("threads"):
       alloc(
-        maximalBinaryLengthFromBase64(input.cstring, input.len.cuint)
+        maximalBinaryLengthFromBase64(input.cstring, input.len.cuint) + 1.cuint
       )
     else:
       allocShared(
-        maximalBinaryLengthFromBase64(input.cstring, input.len.cuint)
+        maximalBinaryLengthFromBase64(input.cstring, input.len.cuint) + 1.cuint
       )
 
   let
