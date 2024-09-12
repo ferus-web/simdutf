@@ -5,7 +5,7 @@ author        = "xTrayambak"
 description   = "Nim bindings to simdutf"
 license       = "Apache-2.0"
 srcDir        = "src"
-
+backend       = "cpp"
 
 # Dependencies
 

@@ -47,4 +47,6 @@ import simdutf/unicode
 
 assert validateUtf8("Hello simdutf!")
 assert validateAscii("This is ascii, isn't it?")
+assert validateUtf16("你好，世界")
+assert validateUtf32("")
 ```

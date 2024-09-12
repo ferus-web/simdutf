@@ -3,6 +3,12 @@
 import simdutf/[bindings, shared]
 
 type
+  UnicodeError* = object of ValueError
+    ## An error that occurs in the unicode module.
+
+  UTF8ToUTF16ConversionFailed* = object of UnicodeError
+  UTF8ToUTF32ConversionFailed* = object of UnicodeError
+
   Encoding* {.pure.} = enum
     UTF8
     UTF16
@@ -74,3 +80,170 @@ proc validateAsciiWithErrors*(input: string): SimdutfResult {.inline.} =
   ## Validate an ASCII string.
   ## This function is suitable for untrusted input.
   simdutfResult(validateUtf8WithErrors(input.cstring, input.len.cuint))
+
+proc validateUtf16*(input: string): bool =
+  ## Validate a UTF-16 string.
+  ## This should be used when you're confident that the encoding isn't erroneous.
+  ## Otherwise, use `validateUtf16WithErrors`.
+  var memory =
+    when not compileOption("threads"):
+      alloc(
+        utf16LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+      )
+    else:
+      allocShared(
+        utf16LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+      )
+
+  var buffer = cast[ptr UncheckedArray[uint16]](memory)
+  if convertUtf8ToUtf16LittleEndianWithErrors(input.cstring, input.len.cuint, buffer).error != error_success:
+    raise newException(
+      UTF8ToUTF16ConversionFailed,
+      "Failed to convert string from UTF-8 to UTF-16 (LE): " & input
+    )
+
+  let validation = validateUtf16LittleEndian(buffer, input.len.cuint)
+  
+  when not compileOption("threads"):
+    dealloc(memory)
+  else:
+    deallocShared(memory)
+
+  validation
+
+proc validateUtf32*(
+  input: string
+): bool =
+  ## Validate a UTF-32 string.
+  ## This should be used when you're confident that the encoding isn't erroneos.
+  ## Otherwise, use `validateUtf32WithErrors`
+  var memory =
+    when not compileOption("threads"):
+      alloc(
+        utf32LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+      )
+    else:
+      allocShared(
+        utf32LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+      )
+
+  var buffer = cast[ptr UncheckedArray[uint32]](memory)
+  if convertUtf8ToUtf32LittleEndianWithErrors(input.cstring, input.len.cuint, buffer).error != error_success:
+    raise newException(
+      UTF8ToUTF32ConversionFailed,
+      "Failed to convert string from UTF-8 to UTF-32 (LE): " & input
+    )
+
+  let validation = validateUtf32LittleEndian(buffer, input.len.cuint)
+  
+  when not compileOption("threads"):
+    dealloc(memory)
+  else:
+    deallocShared(memory)
+
+  validation
+
+proc validateUtf16WithErrors*(input: string): SimdutfResult =
+  ## Validate a UTF-16 string.
+  ## This function is ideal for untrusted inputs.
+  var memory =
+    when not compileOption("threads"):
+      alloc(
+        utf16LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+      )
+    else:
+      allocShared(
+        utf32LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+      )
+
+  var buffer = cast[ptr UncheckedArray[uint16]](memory)
+  if convertUtf8ToUtf16LittleEndianWithErrors(input.cstring, input.len.cuint, buffer).error != error_success:
+    raise newException(
+      UTF8ToUTF16ConversionFailed,
+      "Failed to convert string from UTF-8 to UTF-32 (LE): " & input
+    )
+
+  let validation = validateUtf16LittleEndianWithErrors(buffer, input.len.cuint)
+  
+  when not compileOption("threads"):
+    dealloc(memory)
+  else:
+    deallocShared(memory)
+
+  simdutfResult(validation)
+
+proc validateUtf32WithErrors*(
+  input: string
+): SimdutfResult =
+  ## Validate a UTF-32 string.
+  ## This function is ideal for untrusted inputs.
+  var memory =
+    when not compileOption("threads"):
+      alloc(
+        utf32LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+      )
+    else:
+      allocShared(
+        utf32LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+      )
+
+  var buffer = cast[ptr UncheckedArray[uint32]](memory)
+  if convertUtf8ToUtf32LittleEndianWithErrors(input.cstring, input.len.cuint, buffer).error != error_success:
+    raise newException(
+      UTF8ToUTF32ConversionFailed,
+      "Failed to convert string from UTF-8 to UTF-32 (LE): " & input
+    )
+
+  let validation = validateUtf32LittleEndianWithErrors(buffer, input.len.cuint)
+  
+  when not compileOption("threads"):
+    dealloc(memory)
+  else:
+    deallocShared(memory)
+
+  simdutfResult(validation)
+
+proc convertUtf8ToUint16*(input: string, endianness: Endianness = Endianness.Little): seq[uint16] =
+  var memory =
+    when not compileOption("threads"):
+      alloc(
+        utf32LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+      )
+    else:
+      allocShared(
+        utf32LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+      )
+
+  var buffer = cast[ptr UncheckedArray[uint16]](memory)
+  var size: int
+  case endianness
+  of Endianness.Little:
+    if (let res = convertUtf8ToUtf16LittleEndianWithErrors(input.cstring, input.len.cuint, buffer); res.error == error_success):
+      size = res.count.int
+    else:
+      raise newException(
+        UTF8ToUTF16ConversionFailed,
+        "Failed to convert string from UTF-8 to UTF-16 (LE): " & input
+      )
+  of Endianness.Big:
+    if (let res = convertUtf8ToUtf16BigEndianWithErrors(input.cstring, input.len.cuint, buffer); res.error == error_success):
+      size = res.count.int
+    else:
+      raise newException(
+        UTF8ToUTF16ConversionFailed,
+        "Failed to convert string from UTF-8 to UTF-16 (BE): " & input
+      )
+  of Endianness.None: discard
+
+  when not compileOption("threads"):
+    dealloc(memory)
+  else:
+    deallocShared(memory)
+
+  let utf16Length = size
+  
+  var final = newSeq[uint16](utf16Length)
+  for x in 0 ..< utf16Length:
+    final[x] = buffer[][x]
+
+  final
