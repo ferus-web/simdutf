@@ -20,7 +20,9 @@ $ nimble benchmark
 ```
 
 # Real-World Usage
-This library was initially bound to Nim for [bali](https://github.com/ferus-web/bali), a JavaScript engine written in Nim. It'll hopefully soon fully replace `std/base64` from the entirity of the Ferus' web engine's stack.
+* [bali](https://github.com/ferus-web/bali), a JavaScript engine written in Nim
+
+This will hopefully soon fully replace `std/base64` from the entirity of the Ferus' web engine's stack.
 
 # Usage (Base64)
 The API is almost the same as `std/base64`.
