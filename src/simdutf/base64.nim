@@ -7,6 +7,8 @@ import results
 type
   Base64DecodeError* = object of ValueError
     ## An error that is raised when the Base64 decoder fails to decode a string.
+  
+  InternalSimdutfError* = object of Defect
 
 proc calculateEncodedLength*(input: string, urlSafe: bool = false): uint {.inline.} =
   ## Calculate the length of `input` when it would be encoded with Base64.
@@ -54,17 +56,16 @@ proc encode*(input: string, urlSafe: bool = false): string =
       )
   
   # Convert the input to a `const char *` and pass it over to simdutf.
-  let 
-    inpCstring = input.cstring
-    length = binaryToBase64(
-      inpCstring, 
-      input.len.cuint, 
-      output,
-      if urlSafe:
-        base64_url
-      else:
-        base64_default
-    )
+  let inpCstring = input.cstring
+  discard binaryToBase64(
+    inpCstring, 
+    input.len.cuint, 
+    output,
+    if urlSafe:
+      base64_url
+    else:
+      base64_default
+  )
   
   # Cast the output pointer to a `const char *` and convert that to a string and deep copy it. Now, we're in Nim-land so the GC is responsible for cleaning up this Nim
   # string.
@@ -107,12 +108,15 @@ proc decode*(input: string, urlSafe: bool = false): string =
       else:
         base64_default
     )
-
-  if decodeResult.error != error_success:
+  
+  if decodeResult.error != error_success and decodeResult.error != error_output_buffer_too_small: 
     raise newException(
       Base64DecodeError,
       resultToString(decodeResult)
     )
+
+  if decodeResult.error == error_output_buffer_too_small:
+    raise newException(InternalSimdutfError, "BUG: Base64 decode failed as output buffer was too small!")
   
   let decoded = deepCopy($cast[cstring](output))
 
