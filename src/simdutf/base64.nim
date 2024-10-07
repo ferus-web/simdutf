@@ -14,14 +14,14 @@ proc calculateEncodedLength*(input: string, urlSafe: bool = false): uint {.inlin
   ## Calculate the length of `input` when it would be encoded with Base64.
   ## If you want to account for URL-safe encoding, make sure to pass `urlSafe` as `true`!
   uint(base64LengthFromBinary(
-    input.len.cuint,
+    input.len.csize_t,
     if urlSafe: base64_url else: base64_default
   ))
 
 proc calculateDecodedLength*(input: string): uint {.inline.} =
   ## Calculate the length of `input` when it would be decoded, granted that it is a valid Base64-encoded string.
   uint(maximalBinaryLengthFromBase64(
-    input.cstring, input.len.cuint
+    input.cstring, input.len.csize_t
   ))
 
 proc encode*(input: string, urlSafe: bool = false): string =
@@ -37,29 +37,29 @@ proc encode*(input: string, urlSafe: bool = false): string =
     when not compileOption("threads"):
       alloc(
         base64LengthFromBinary(
-          input.len.cuint,
+          input.len.csize_t,
           if urlSafe:
             base64_url
           else:
             base64_default
-        ) + 1.cuint
+        ) + 1.csize_t
       )
     else:
       allocShared(
         base64LengthFromBinary(
-          input.len.cuint,
+          input.len.csize_t,
           if urlSafe:
             base64_url
           else:
             base64_default
-        ) + 1.cuint
+        ) + 1.csize_t
       )
   
   # Convert the input to a `const char *` and pass it over to simdutf.
   let inpCstring = input.cstring
   discard binaryToBase64(
     inpCstring, 
-    input.len.cuint, 
+    input.len.csize_t, 
     output,
     if urlSafe:
       base64_url
@@ -90,18 +90,18 @@ proc decode*(input: string, urlSafe: bool = false): string =
   var output = 
     when not compileOption("threads"):
       alloc(
-        maximalBinaryLengthFromBase64(input.cstring, input.len.cuint) + 1.cuint
+        maximalBinaryLengthFromBase64(input.cstring, input.len.csize_t) + 1.csize_t
       )
     else:
       allocShared(
-        maximalBinaryLengthFromBase64(input.cstring, input.len.cuint) + 1.cuint
+        maximalBinaryLengthFromBase64(input.cstring, input.len.csize_t) + 1.csize_t
       )
 
   let
     inpCstring = input.cstring
     decodeResult = base64ToBinary(
       inpCstring,
-      input.len.cuint,
+      input.len.csize_t,
       output,
       if urlSafe:
         base64_url
