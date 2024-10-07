@@ -203,7 +203,8 @@ proc validateUtf32WithErrors*(
 
   simdutfResult(validation)
 
-proc convertUtf8ToUint16*(input: string, endianness: Endianness = Endianness.Little): seq[uint16] =
+proc convertUtf8ToUtf16*(input: string, endianness: Endianness = Endianness.Little): seq[uint16] =
+  ## Convert a valid UTF-8 string to UTF-16 encoded bytes.
   var memory =
     when not compileOption("threads"):
       alloc(
@@ -241,9 +242,44 @@ proc convertUtf8ToUint16*(input: string, endianness: Endianness = Endianness.Lit
     deallocShared(memory)
 
   let utf16Length = size
-  
+
   var final = newSeq[uint16](utf16Length)
   for x in 0 ..< utf16Length:
     final[x] = buffer[][x]
 
   final
+
+proc countCodepoints*(input: string, info: sink EncodingInfo = EncodingInfo(endianness: Endianness.None)): uint =
+  ## Count the number of Unicode codepoints in this string
+  ## It is acceptable to pass invalid UTF-8 strings but in such cases
+  ## the result is implementation defined.
+  
+  if info.endianness == None:
+    # autodetect the encoding, we weren't provided anything.
+    info = autodetectEncoding(input)
+  
+  case info.encoding
+  of UTF8:
+    return uint(countUtf8(input.cstring, input.len.csize_t))
+  of UTF16:
+    case info.endianness
+    of Little:
+      var memory = when not compileOption("threads"):
+        alloc(
+          utf32LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+        )
+      else:
+        allocShared(
+          utf32LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
+        )
+      
+      var buffer = cast[ptr UncheckedArray[uint16]](memory)
+      let converted = convertUtf8ToUint16(input, Endianness.Little)
+
+      for i, u16 in converted:
+        buffer[i] = u16
+
+      return uint(countUtf16LittleEndian(buffer, converted.len.csize_t))
+    of Big: return
+    else: assert false, "unreachable"
+  else: discard
