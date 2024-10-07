@@ -274,7 +274,7 @@ proc countCodepoints*(input: string, info: sink EncodingInfo = EncodingInfo(endi
         )
       
       var buffer = cast[ptr UncheckedArray[uint16]](memory)
-      let converted = convertUtf8ToUint16(input, Endianness.Little)
+      let converted = convertUtf8ToUtf16(input, Endianness.Little)
 
       for i, u16 in converted:
         buffer[i] = u16
