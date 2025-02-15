@@ -95,7 +95,7 @@ proc validateUtf16*(input: string): bool =
         utf16LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
       )
 
-  var buffer = cast[ptr UncheckedArray[uint16]](memory)
+  var buffer = cast[ptr UncheckedArray[char16_t]](memory)
   if convertUtf8ToUtf16LittleEndianWithErrors(input.cstring, input.len.cuint, buffer).error != error_success:
     raise newException(
       UTF8ToUTF16ConversionFailed,
@@ -156,7 +156,7 @@ proc validateUtf16WithErrors*(input: string): SimdutfResult =
         utf32LengthFromUtf8(input.cstring, input.len.cuint) + 1.cuint
       )
 
-  var buffer = cast[ptr UncheckedArray[uint16]](memory)
+  var buffer = cast[ptr UncheckedArray[char16_t]](memory)
   if convertUtf8ToUtf16LittleEndianWithErrors(input.cstring, input.len.cuint, buffer).error != error_success:
     raise newException(
       UTF8ToUTF16ConversionFailed,
