@@ -9,6 +9,7 @@ import std/[strutils]
 {.push header: "<simdutf.h>".}
 
 type
+  char16_t* {.importcpp.} = object
   base64_options* {.importcpp: "simdutf::base64_options", pure.} = uint64 ## A base64 encoder option.
   error_code* {.importcpp: "simdutf::error_code", pure.} = uint64 ## An error code.
 
@@ -148,11 +149,11 @@ proc utf8LengthFromUtf32LittleEndian*(input: ptr UncheckedArray[uint32], length:
 
 proc utf8LengthFromUtf32BigEndian*(input: ptr UncheckedArray[uint32], length: csize_t): csize_t {.importcpp: "simdutf::utf8_length_from_utf32be(@)".}
 
-proc convertUtf8ToUtf16LittleEndian*(input: cstring, length: csize_t, output: ptr UncheckedArray[uint16]): csize_t {.importcpp: "simdutf::convert_utf8_to_utf16le(@)".}
+proc convertUtf8ToUtf16LittleEndian*(input: cstring, length: csize_t, output: ptr UncheckedArray[char16_t]): csize_t {.importcpp: "simdutf::convert_utf8_to_utf16le(@)".}
 
 proc convertUtf8ToUtf16BigEndian*(input: cstring, length: csize_t, output: pointer): csize_t {.importcpp: "simdutf::convert_utf8_to_utf16be(@)".}
 
-proc convertUtf8ToUtf16LittleEndianWithErrors*(input: cstring, length: csize_t, output: ptr UncheckedArray[uint16]): simdutf_result {.importcpp: "simdutf::convert_utf8_to_utf16le_with_errors(@)".}
+proc convertUtf8ToUtf16LittleEndianWithErrors*(input: cstring, length: csize_t, output: ptr UncheckedArray[char16_t]): simdutf_result {.importcpp: "simdutf::convert_utf8_to_utf16le_with_errors(@)".}
 
 proc convertUtf8ToUtf16BigEndianWithErrors*(input: cstring, length: csize_t, output: pointer): simdutf_result {.importcpp: "simdutf::convert_utf8_to_utf16be_with_errors(@)".}
 
@@ -173,7 +174,7 @@ proc convertLatin1ToUtf16WithErrors*(input: cstring, length: csize_t, output: po
 proc convertLatin1ToUtf16LittleEndian*(input: cstring, length: csize_t, output: pointer): csize_t {.importcpp: "simdutf::convert_latin1_to_utf16le(@)".}
 
 proc countUtf8*(input: cstring, length: csize_t): csize_t {.importcpp: "simdutf::count_utf8(@)".}
-proc countUtf16*(input: cstring, length: csize_t): csize_t {.importcpp: "simdutf::count_utf16(@)".}
+proc countUtf16*(input: ptr UncheckedArray[char16_t], length: csize_t): csize_t {.importcpp: "simdutf::count_utf16(@)".}
 proc countUtf32*(input: cstring, length: csize_t): csize_t {.importcpp: "simdutf::count_utf32(@)".}
 proc countUtf16LittleEndian*(input: ptr UncheckedArray[uint16], length: csize_t): csize_t {.importcpp: "simdutf::count_utf16le(@)".}
 proc countUtf16BigEndian*(input: ptr UncheckedArray[uint16], length: csize_t): csize_t {.importcpp: "simdutf::count_utf16be(@)".}
