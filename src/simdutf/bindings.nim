@@ -98,23 +98,23 @@ proc validateUtf16*(
 ): bool {.importcpp: "simdutf::validate_utf16(@)".}
 
 proc validateUtf16LittleEndian*(
-  input: ptr UncheckedArray[uint16], length: csize_t
+  input: ptr UncheckedArray[char16_t], length: csize_t
 ): bool {.importcpp: "simdutf::validate_utf16le(@)".}
 
 proc validateUtf16BigEndian*(
-  input: ptr UncheckedArray[uint16], length: csize_t
+  input: ptr UncheckedArray[char16_t], length: csize_t
 ): bool {.importcpp: "simdutf::validate_utf16be(@)".}
 
 proc validateUtf16WithErrors*(
-  input: ptr UncheckedArray[uint16], length: csize_t
+  input: ptr UncheckedArray[char16_t], length: csize_t
 ): simdutf_result {.importcpp: "simdutf::validate_utf16_with_errors(@)".}
 
 proc validateUtf16LittleEndianWithErrors*(
-  input: ptr UncheckedArray[uint16], length: csize_t
+  input: ptr UncheckedArray[char16_t], length: csize_t
 ): simdutf_result {.importcpp: "simdutf::validate_utf16le_with_errors(@)".}
 
 proc validateUtf16BigEndianWithErrors*(
-  input: ptr UncheckedArray[uint16], length: csize_t
+  input: ptr UncheckedArray[char16_t], length: csize_t
 ): simdutf_result {.importcpp: "simdutf::validate_utf16be_with_errors(@)".}
 
 proc validateUtf32*(
