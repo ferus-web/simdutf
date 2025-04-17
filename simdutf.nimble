@@ -1,11 +1,11 @@
 # Package
 
-version       = "6.1.1"
-author        = "xTrayambak"
-description   = "Nim bindings to simdutf"
-license       = "Apache-2.0"
-srcDir        = "src"
-backend       = "cpp"
+version = "6.5.0"
+author = "xTrayambak"
+description = "Nim bindings to simdutf"
+license = "Apache-2.0"
+srcDir = "src"
+backend = "cpp"
 
 # Dependencies
 

@@ -7,22 +7,21 @@ import results
 type
   Base64DecodeError* = object of ValueError
     ## An error that is raised when the Base64 decoder fails to decode a string.
-  
+
   InternalSimdutfError* = object of Defect
 
 proc calculateEncodedLength*(input: string, urlSafe: bool = false): uint {.inline.} =
   ## Calculate the length of `input` when it would be encoded with Base64.
   ## If you want to account for URL-safe encoding, make sure to pass `urlSafe` as `true`!
-  uint(base64LengthFromBinary(
-    input.len.csize_t,
-    if urlSafe: base64_url else: base64_default
-  ))
+  uint(
+    base64LengthFromBinary(
+      input.len.csize_t, if urlSafe: base64_url else: base64_default
+    )
+  )
 
 proc calculateDecodedLength*(input: string): uint {.inline.} =
   ## Calculate the length of `input` when it would be decoded, granted that it is a valid Base64-encoded string.
-  uint(maximalBinaryLengthFromBase64(
-    input.cstring, input.len.csize_t
-  ))
+  uint(maximalBinaryLengthFromBase64(input.cstring, input.len.csize_t))
 
 proc encode*(input: string, urlSafe: bool = false): string =
   ## Encode a string using base64. Optionally, encode it to be URL-safe.
@@ -33,44 +32,30 @@ proc encode*(input: string, urlSafe: bool = false): string =
   # Do NOT mess with how the buffer size is calculated! If the buffer is too small,
   # we can potentially trigger a buffer overflow. Therefore, do not touch it unless you know what
   # you're doing. If I've scared you away from messing with it, then that's probably a good thing.
-  var output = 
+  var output =
     when not compileOption("threads"):
       alloc(
         base64LengthFromBinary(
-          input.len.csize_t,
-          if urlSafe:
-            base64_url
-          else:
-            base64_default
+          input.len.csize_t, if urlSafe: base64_url else: base64_default
         ) + 1.csize_t
       )
     else:
       allocShared(
         base64LengthFromBinary(
-          input.len.csize_t,
-          if urlSafe:
-            base64_url
-          else:
-            base64_default
+          input.len.csize_t, if urlSafe: base64_url else: base64_default
         ) + 1.csize_t
       )
-  
+
   # Convert the input to a `const char *` and pass it over to simdutf.
   let inpCstring = input.cstring
   discard binaryToBase64(
-    inpCstring, 
-    input.len.csize_t, 
-    output,
-    if urlSafe:
-      base64_url
-    else:
-      base64_default
+    inpCstring, input.len.csize_t, output, if urlSafe: base64_url else: base64_default
   )
-  
+
   # Cast the output pointer to a `const char *` and convert that to a string and deep copy it. Now, we're in Nim-land so the GC is responsible for cleaning up this Nim
   # string.
   let encoded = deepCopy($cast[cstring](output))
-  
+
   # However, Nim isn't responsible for cleaning the buffer we allocated earlier, so free it up.
   when not compileOption("threads"):
     dealloc(output)
@@ -82,16 +67,14 @@ proc encode*(input: string, urlSafe: bool = false): string =
 proc decode*(input: string, urlSafe: bool = false): string =
   ## Decode a base64-encoded string, given that it's valid.
   ## If this string was encoded with URL-safety enabled, make sure to enable that here as well.
-  
+
   # NOTE: If you ever make changes around this allocation, please keep the following in mind:
   # Do NOT fiddle with how the length of the buffer is calculated! If the buffer is too small, then
   # we can potentially trigger a buffer overflow. `maximalBinaryLengthFromBase64` ensures that that doesn't
   # occur, so do not mess around with this unless you're _completely_ sure of what you're doing.
-  var output = 
+  var output =
     when not compileOption("threads"):
-      alloc(
-        maximalBinaryLengthFromBase64(input.cstring, input.len.csize_t) + 1.csize_t
-      )
+      alloc(maximalBinaryLengthFromBase64(input.cstring, input.len.csize_t) + 1.csize_t)
     else:
       allocShared(
         maximalBinaryLengthFromBase64(input.cstring, input.len.csize_t) + 1.csize_t
@@ -100,24 +83,18 @@ proc decode*(input: string, urlSafe: bool = false): string =
   let
     inpCstring = input.cstring
     decodeResult = base64ToBinary(
-      inpCstring,
-      input.len.csize_t,
-      output,
-      if urlSafe:
-        base64_url
-      else:
-        base64_default
-    )
-  
-  if decodeResult.error != error_success and decodeResult.error != error_output_buffer_too_small: 
-    raise newException(
-      Base64DecodeError,
-      resultToString(decodeResult)
+      inpCstring, input.len.csize_t, output, if urlSafe: base64_url else: base64_default
     )
 
+  if decodeResult.error != error_success and
+      decodeResult.error != error_output_buffer_too_small:
+    raise newException(Base64DecodeError, resultToString(decodeResult))
+
   if decodeResult.error == error_output_buffer_too_small:
-    raise newException(InternalSimdutfError, "BUG: Base64 decode failed as output buffer was too small!")
-  
+    raise newException(
+      InternalSimdutfError, "BUG: Base64 decode failed as output buffer was too small!"
+    )
+
   let decoded = deepCopy($cast[cstring](output))
 
   when not compileOption("threads"):
@@ -127,13 +104,58 @@ proc decode*(input: string, urlSafe: bool = false): string =
 
   decoded
 
-proc decodeOrError*(input: string, urlSafe: bool = false): Result[string, string] {.inline.} =
+proc decodeSeq*(input: string, urlSafe: bool = false): seq[uint8] =
+  ## Decode a base64-encoded string into a sequence of bytes, given that it's valid.
+  ## If this string was encoded with URL-safety enabled, make sure to enable that here as well.
+  let outputLen =
+    maximalBinaryLengthFromBase64(input.cstring, input.len.csize_t) + 1.csize_t
+
+  # NOTE: If you ever make changes around this allocation, please keep the following in mind:
+  # Do NOT fiddle with how the length of the buffer is calculated! If the buffer is too small, then
+  # we can potentially trigger a buffer overflow. `maximalBinaryLengthFromBase64` ensures that that doesn't
+  # occur, so do not mess around with this unless you're _completely_ sure of what you're doing.
+  var output =
+    when not compileOption("threads"):
+      alloc()
+    else:
+      allocShared(
+        maximalBinaryLengthFromBase64(input.cstring, input.len.csize_t) + 1.csize_t
+      )
+
+  let
+    inpCstring = input.cstring
+    decodeResult = base64ToBinary(
+      inpCstring, input.len.csize_t, output, if urlSafe: base64_url else: base64_default
+    )
+
+  if decodeResult.error != error_success and
+      decodeResult.error != error_output_buffer_too_small:
+    raise newException(Base64DecodeError, resultToString(decodeResult))
+
+  if decodeResult.error == error_output_buffer_too_small:
+    raise newException(
+      InternalSimdutfError, "BUG: Base64 decode failed as output buffer was too small!"
+    )
+
+  var decoded = newSeq[uint8](decodeResult.count)
+  copyMem(
+    decoded[0].addr, cast[ptr UncheckedArray[uint8]](output)[0].addr, decodeResult.count
+  )
+
+  #[when not compileOption("threads"):
+    dealloc(output)
+  else:
+    deallocShared(output)]#
+
+  move(decoded)
+
+proc decodeOrError*(
+    input: string, urlSafe: bool = false
+): Result[string, string] {.inline.} =
   ## Try decoding a base64-encoded string, and return an error upon failure. 
   ## This is meant for people who do not like using exceptions and works the same way as the main decode function.
   try:
-    return ok(input.decode(
-      urlSafe = urlSafe
-    ))
+    return ok(input.decode(urlSafe = urlSafe))
   except Base64DecodeError as exc:
     return err(exc.msg)
 
@@ -142,8 +164,6 @@ proc tryDecode*(input: string, urlSafe: bool = false): Option[string] {.inline.}
   ## This is meant for people who don't wish to use exceptions and just use options instead. It works the
   ## same way as the main decode function.
   try:
-    return some(input.decode(
-      urlSafe = urlSafe
-    ))
+    return some(input.decode(urlSafe = urlSafe))
   except Base64DecodeError:
     return none(string)
