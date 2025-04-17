@@ -95,7 +95,9 @@ proc decode*(input: string, urlSafe: bool = false): string =
       InternalSimdutfError, "BUG: Base64 decode failed as output buffer was too small!"
     )
 
-  let decoded = deepCopy($cast[cstring](output))
+  var outputSeq = newSeq[uint8](decodeResult.count)
+  copyMem(outputSeq[0].addr, cast[ptr UncheckedArray[uint8]](output)[0].addr, decodeResult.count)
+  let decoded = cast[string](outputSeq)
 
   when not compileOption("threads"):
     dealloc(output)
@@ -142,10 +144,10 @@ proc decodeSeq*(input: string, urlSafe: bool = false): seq[uint8] =
     decoded[0].addr, cast[ptr UncheckedArray[uint8]](output)[0].addr, decodeResult.count
   )
 
-  #[when not compileOption("threads"):
+  when not compileOption("threads"):
     dealloc(output)
   else:
-    deallocShared(output)]#
+    deallocShared(output)
 
   move(decoded)
 
