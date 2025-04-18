@@ -1,6 +1,6 @@
 # Package
 
-version = "6.5.1"
+version = "6.5.12"
 author = "xTrayambak"
 description = "Nim bindings to simdutf"
 license = "Apache-2.0"
