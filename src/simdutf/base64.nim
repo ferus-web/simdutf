@@ -48,13 +48,13 @@ proc encode*(input: string, urlSafe: bool = false): string =
 
   # Convert the input to a `const char *` and pass it over to simdutf.
   let inpCstring = input.cstring
-  discard binaryToBase64(
+  let cnt = binaryToBase64(
     inpCstring, input.len.csize_t, output, if urlSafe: base64_url else: base64_default
-  )
+  ).uint64
 
-  # Cast the output pointer to a `const char *` and convert that to a string and deep copy it. Now, we're in Nim-land so the GC is responsible for cleaning up this Nim
-  # string.
-  let encoded = deepCopy($cast[cstring](output))
+  var outputSeq = newSeq[uint8](cnt)
+  copyMem(outputSeq[0].addr, cast[ptr UncheckedArray[uint8]](output)[0].addr, cnt)
+  let encoded = cast[string](outputSeq)
 
   # However, Nim isn't responsible for cleaning the buffer we allocated earlier, so free it up.
   when not compileOption("threads"):
@@ -96,7 +96,11 @@ proc decode*(input: string, urlSafe: bool = false): string =
     )
 
   var outputSeq = newSeq[uint8](decodeResult.count)
-  copyMem(outputSeq[0].addr, cast[ptr UncheckedArray[uint8]](output)[0].addr, decodeResult.count)
+  copyMem(
+    outputSeq[0].addr,
+    cast[ptr UncheckedArray[uint8]](output)[0].addr,
+    decodeResult.count,
+  )
   let decoded = cast[string](outputSeq)
 
   when not compileOption("threads"):
