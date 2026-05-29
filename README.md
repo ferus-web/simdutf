@@ -1,3 +1,5 @@
+**WARNING**: This package is deprecated, and is known to be have certain performance issues. Do not use it!
+
 # High-level wrapper over simdutf
 This package provides a nice little interface over [simdutf](https://github.com/simdutf/simdutf), a fast, cross-architecture SIMD accelerated library for base64 encoding and decoding alongside encoding validation and conversion.
 
